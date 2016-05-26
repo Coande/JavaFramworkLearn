@@ -56,10 +56,10 @@
 						<td>${user.value.age }</td>
 						<td>${user.value.sex }</td>
 						<td><a
-							href="${pageContext.request.contextPath }/user/delete/${user.value.username }"
+							href="${pageContext.request.contextPath }/user/delete/${user.value.userId }"
 							class="btn btn-danger"><spring:message code="button.delete"></spring:message></a>
 							&nbsp; <a
-							href="${pageContext.request.contextPath }/user/edit/${user.value.username }"
+							href="${pageContext.request.contextPath }/user/edit/${user.value.userId }"
 							class="btn btn-info"><spring:message code="button.edit"></spring:message></a></td>
 					</tr>
 				</c:forEach>

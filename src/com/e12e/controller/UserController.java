@@ -1,15 +1,14 @@
 package com.e12e.controller;
 
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,24 +21,17 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
-import com.e12e.entity.User;
+import com.e12e.dao.UserDAO;
+import com.e12e.model.User;
 
 @Controller
 @RequestMapping(value = "user")
 public class UserController {
 
+	@Autowired
+	UserDAO userDAO;
+	
 	Map<String, User> userMap = new HashMap<String, User>();
-
-	/**
-	 * 装载数据
-	 */
-	public UserController() {
-		userMap.put("Coande01", new User("Coande01", "password01", "e11e@qq.com", 18, "男"));
-		userMap.put("Coande02", new User("Coande02", "password02", "e12e@qq.com", 19, "女"));
-		userMap.put("Coande03", new User("Coande03", "password03", "e13e@qq.com", 20, "男"));
-		userMap.put("Coande04", new User("Coande04", "password04", "e14e@qq.com", 21, "女"));
-		userMap.put("张三1111", new User("张三1111", "密码123456", "e14e@qq.com", 21, "男"));
-	}
 
 	
 	/**
@@ -74,6 +66,11 @@ public class UserController {
 	 */
 	@RequestMapping(value = "/userList", method = RequestMethod.GET)
 	public String list(Model model) {
+		List<User> userList=userDAO.find();
+		//将DAO返回的List转换成Map
+		for(User user:userList){
+			userMap.put(user.getUserId()+"", user);
+		}
 		model.addAttribute("users", userMap);
 		return "/user/userList";
 	}
@@ -87,19 +84,16 @@ public class UserController {
 	 */
 	@RequestMapping(value = "/userList", method = RequestMethod.POST)
 	public String search(Model model, String keyword) {
-		System.out.println("keyword=" + keyword);
+
 		// 用于存储查询到的结果
 		Map<String, User> temp = new HashMap<String, User>();
 
-		Set set = userMap.keySet();
-		Iterator<String> it = set.iterator();
-		while (it.hasNext()) {
-			String mapKey = it.next();
-			// 忽略大小写进行匹配
-			if (mapKey.matches("(?i).*" + keyword + ".*")) {
-				temp.put(mapKey, userMap.get(mapKey));
-			}
+		List<User> userList=userDAO.findByUsername(keyword);
+		//将DAO返回的List转换成Map
+		for(User user:userList){
+			temp.put(user.getUserId()+"", user);
 		}
+		
 		model.addAttribute("users", temp);
 		return "/user/userList";
 	}
@@ -111,35 +105,24 @@ public class UserController {
 	 * @param model
 	 * @return
 	 */
-	@RequestMapping(value = "/delete/{username}", method = RequestMethod.GET)
-	public String delete(@PathVariable String username, Model model) {
-		try {
-			// 解决乱码问题
-			username = new String(username.getBytes("ISO-8859-1"), "utf-8");
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
-		System.out.println("delete something : " + username);
-		userMap.remove(username);
+	@RequestMapping(value = "/delete/{userId}", method = RequestMethod.GET)
+	public String delete(@PathVariable String userId, Model model) {
+		userDAO.delete(Integer.parseInt(userId));
+		userMap.remove(userId);
 		return "redirect:/user/userList";
 	}
 
 	/**
 	 * 跳转到编辑用户页面
 	 * 
-	 * @param username
+	 * @param userId
 	 * @param model
 	 * @return
 	 */
-	@RequestMapping(value = "/edit/{username}", method = RequestMethod.GET)
-	public String edit(@PathVariable String username, Model model) {
-		// 解决乱码问题
-		try {
-			username = new String(username.getBytes("ISO-8859-1"), "utf-8");
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
-		model.addAttribute("user", userMap.get(username));
+	@RequestMapping(value = "/edit/{userId}", method = RequestMethod.GET)
+	public String edit(@PathVariable String userId, Model model) {
+
+		model.addAttribute("user", userMap.get(userId));
 		return "/user/userEdit";
 	}
 
@@ -150,21 +133,17 @@ public class UserController {
 	 * @param req
 	 * @return
 	 */
-	@RequestMapping(value = "/edit/{username}", method = RequestMethod.POST)
-	public String doEdit(@PathVariable String username, @Validated User user, BindingResult br) {
-		// 解决乱码问题
-		try {
-			username = new String(username.getBytes("ISO-8859-1"), "utf-8");
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
+	@RequestMapping(value = "/edit/{userId}", method = RequestMethod.POST)
+	public String doEdit(@PathVariable String userId, @Validated User user, BindingResult br) {
 
 		if (br.hasErrors()) {
 			return "/user/userEdit";
 		}
-
-		userMap.remove(username);
-		userMap.put(user.getUsername(), user);
+		user.setUserId(Integer.parseInt(userId));
+		userDAO.update(user);
+		
+		userMap.put(userId, user);
+		
 		return "redirect:/user/userList";
 	}
 
@@ -186,15 +165,15 @@ public class UserController {
 	 * @return
 	 */
 	@RequestMapping(value = "/add", method = RequestMethod.POST)
-	public String doAdd(HttpServletRequest req, @Validated User user, BindingResult br, Map<String, Object> map) {
+	public String doAdd(HttpServletRequest req, @Validated User user, BindingResult br) {
 		if (br.hasErrors()) {
-
 			for (ObjectError oe : br.getAllErrors()) {
 				System.out.println(oe.getDefaultMessage());
 			}
 			return "/user/userAdd";
 		}
-		userMap.put(user.getUsername(), user);
+		userDAO.save(user);
+		
 		return "redirect:/user/userList";
 	}
 }

@@ -46,7 +46,7 @@ label.error {
 			<spring:message code="tip.userEdit"></spring:message>
 		</h1>
 		<form:form
-			action="${pageContext.request.contextPath }/user/edit/${user.username}"
+			action="${pageContext.request.contextPath }/user/edit/${user.userId}"
 			method="post" modelAttribute="user" role="form"
 			cssClass="form-horizontal" id="userForm">
 			<div class="form-group">
@@ -55,7 +55,7 @@ label.error {
 				<div class="col-sm-11">
 					<input type="text" name="username" value="${user.username }"
 						class="form-control" disabled> <input type="text"
-						name="username" value="${user.username }" class="sr-only" require
+						name="username" value="${user.username }" class="sr-only" required
 						minlength="6">
 					<form:errors path="username"></form:errors>
 				</div>
@@ -66,7 +66,7 @@ label.error {
 						code="user.password"></spring:message></label>
 				<div class="col-sm-11">
 					<input type="password" name="password" value="${user.password }"
-						class="form-control" require minlength="6">
+						class="form-control" required minlength="6">
 					<form:errors path="password"></form:errors>
 				</div>
 			</div>
